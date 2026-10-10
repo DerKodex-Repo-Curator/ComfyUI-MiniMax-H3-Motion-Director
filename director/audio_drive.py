@@ -611,7 +611,7 @@ def install_audio_drive_support() -> None:
     if _INSTALLED:
         return
 
-    from . import audio_export, executor_core
+    from . import audio_export, executor_core, executor_core_legacy
 
     original_execute = executor_core.execute_director_plan_core
     original_build_inputs = executor_core._build_minimax_inputs
@@ -676,6 +676,10 @@ def install_audio_drive_support() -> None:
 
     executor_core._build_minimax_inputs = build_inputs
     executor_core.sample_single_stage = first_sample
+    # executor_core runs the legacy function on a copy of executor_core_legacy globals,
+    # so the hooks must live there to be seen.
+    executor_core_legacy._build_minimax_inputs = build_inputs
+    executor_core_legacy.sample_single_stage = first_sample
     executor_core.execute_director_plan_core = execute
     audio_export.build_director_audio_outputs = build_audio
     audio_export.source_audio_report_note = source_note
