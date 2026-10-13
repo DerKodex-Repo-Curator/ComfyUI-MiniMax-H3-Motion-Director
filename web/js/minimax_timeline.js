@@ -1132,6 +1132,11 @@ function restoreDirectorWidgetState(node, serializedNode) {
     const savedProperties =
         serializedNode.properties?.mmx_director_widget_state;
 
+    // API-format workflows serialize node inputs by widget name.  Prefer the
+    // richer editor mirrors above, but keep this fallback so loading an API
+    // workflow hydrates the editor before it can re-serialize timeline_data.
+    const serializedInputs = serializedNode.inputs;
+
     let source = null;
 
     if (
@@ -1147,6 +1152,12 @@ function restoreDirectorWidgetState(node, serializedNode) {
         && !Array.isArray(savedProperties)
     ) {
         source = savedProperties;
+    } else if (
+        serializedInputs
+        && typeof serializedInputs === "object"
+        && !Array.isArray(serializedInputs)
+    ) {
+        source = serializedInputs;
     }
 
     if (!source) {
@@ -5073,8 +5084,12 @@ class MiniMaxH3MotionDirectorEditor {
                         linked: !!r.linked || !!(r.videoFile || r.previewImageFile || r.previewImageUrl),
                     }))
                     : (prev[i]?.refVideos || []);
+                const externalRefAudios = Array.isArray(spec.refAudios)
+                    && spec.refAudios.length > 0
+                    ? spec.refAudios
+                    : null;
                 const refAudios = isR2v
-                    ? (spec.refAudios || []).map((r) => ({
+                    ? (externalRefAudios || prev[i]?.refAudios || []).map((r) => ({
                         index: r.index,
                         assetId: (prev[i]?.refAudios || []).find((x) => Number(x.index ?? x.slot) === Number(r.index))?.assetId || "",
                         audioFile: r.audioFile || "",

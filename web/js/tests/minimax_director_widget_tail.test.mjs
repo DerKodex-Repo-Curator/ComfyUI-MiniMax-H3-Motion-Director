@@ -8,7 +8,59 @@
 // boolean slot instead of null.
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { repairDirectorWidgetTailWorkflow } from "../minimax_sampling_ui.js";
+
+// The full timeline module imports ComfyUI frontend modules, so keep this
+// regression check standalone: inspect the restoration contract directly.
+const timelineSource = readFileSync(
+    new URL("../minimax_timeline.js", import.meta.url),
+    "utf8",
+);
+const restoreStart = timelineSource.indexOf("function restoreDirectorWidgetState");
+const restoreEnd = timelineSource.indexOf("function normalizeDirectorTimelineWidget", restoreStart);
+const restoreBody = timelineSource.slice(restoreStart, restoreEnd);
+assert.match(restoreBody, /const serializedInputs = serializedNode\.inputs;/);
+assert.match(
+    restoreBody,
+    /savedProperties[\s\S]*?source = savedProperties;[\s\S]*?serializedInputs[\s\S]*?source = serializedInputs;/,
+    "API inputs are a fallback after named values and saved properties",
+);
+assert.match(
+    restoreBody,
+    /widget\.name === "timeline_data"\s*\n\s*\? normalizeTimelineAudioRefs\(value\)/,
+    "API timeline_data still passes through audio-ref normalization",
+);
+
+const externalSyncStart = timelineSource.indexOf("syncExternalGroupsTimeline()");
+const externalSyncEnd = timelineSource.indexOf("\n    _observeViewportResize()", externalSyncStart);
+const externalSyncBody = timelineSource.slice(externalSyncStart, externalSyncEnd);
+assert.match(
+    externalSyncBody,
+    /const externalRefAudios = Array\.isArray\(spec\.refAudios\)[\s\S]*?spec\.refAudios\.length > 0[\s\S]*?\? spec\.refAudios[\s\S]*?: null;/,
+    "R2V external audio replaces only when explicitly non-empty",
+);
+assert.match(
+    externalSyncBody,
+    /\(externalRefAudios \|\| prev\[i\]\?\.refAudios \|\| \[\]\)\.map\(/,
+    "R2V absent or empty external audio preserves previous refs",
+);
+
+// Keep the intended branch semantics executable without importing ComfyUI's
+// frontend: absent/empty external lists preserve, non-empty lists replace.
+const resolveExternalRefAudios = (spec, previous) => {
+    const external = Array.isArray(spec?.refAudios) && spec.refAudios.length > 0
+        ? spec.refAudios
+        : null;
+    return (external || previous || []).map((item) => item.audioFile);
+};
+const previousAudio = [{ audioFile: "nested-api.wav" }];
+assert.deepEqual(resolveExternalRefAudios({}, previousAudio), ["nested-api.wav"]);
+assert.deepEqual(resolveExternalRefAudios({ refAudios: [] }, previousAudio), ["nested-api.wav"]);
+assert.deepEqual(
+    resolveExternalRefAudios({ refAudios: [{ audioFile: "external.wav" }] }, previousAudio),
+    ["external.wav"],
+);
 
 const POSTPROCESS = '{"version":11,"global_refine":{"enabled":false}}';
 
