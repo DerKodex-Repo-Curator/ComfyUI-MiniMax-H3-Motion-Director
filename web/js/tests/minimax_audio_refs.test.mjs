@@ -4,6 +4,7 @@ import {
     normalizeSegmentRefAudios,
     normalizeTimelineAudioRefs,
 } from "../minimax_audio_refs.mjs";
+import { ensureR2vReferenceAssetSchema } from "../minimax_reference_assets.mjs";
 
 const canonical = [{ index: 0, audioFile: "canonical.wav" }];
 const legacy = [{ index: 0, audioFile: "legacy.wav" }];
@@ -31,5 +32,9 @@ const roundTrip = JSON.parse(normalizeTimelineAudioRefs(rawTimeline));
 assert.deepEqual(roundTrip.segments[0].refAudios, nested);
 assert.deepEqual(roundTrip.segments[0].inputs.refAudios, nested);
 assert.equal(normalizeTimelineAudioRefs("not-json"), "not-json");
+
+const schemaTimeline = { segments: [{ inputs: { refAudios: nested } }] };
+ensureR2vReferenceAssetSchema(schemaTimeline, (kind) => `${kind}-test`);
+assert.deepEqual(schemaTimeline.segments[0].refAudios, nested);
 
 console.log("minimax_audio_refs: PASS");

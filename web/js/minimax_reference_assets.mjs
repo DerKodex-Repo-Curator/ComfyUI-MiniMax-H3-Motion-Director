@@ -1,5 +1,7 @@
 /** Stable R2V asset identity and per-segment official tag compilation. */
 
+import { normalizeSegmentRefAudios } from "./minimax_audio_refs.mjs";
+
 export const SEMANTIC_REFERENCE_RE = /\{\{mmx-ref:(picture|video|audio):([A-Za-z0-9_.:-]+)\}\}/gi;
 
 function defaultIdFactory(kind = "asset") {
@@ -280,6 +282,7 @@ export function ensureR2vReferenceAssetSchema(timeline, idFactory = defaultIdFac
     const allCommon = referenceAssetIds(data.r2vCommon);
     for (let index = 0; index < data.segments.length; index += 1) {
         const segment = data.segments[index] || (data.segments[index] = {});
+        normalizeSegmentRefAudios(segment);
         ensureIds(segment, `segment-${segment.id || index}`, idFactory, used);
         const storedExclusions = Array.isArray(segment.excludedCommonAssetIds)
             ? segment.excludedCommonAssetIds
@@ -318,6 +321,7 @@ export function ensureReferenceAssetSchema(timeline, idFactory = defaultIdFactor
     if (data.r2vCommon) ensureIds(data.r2vCommon, "r2v-common", idFactory, used);
     for (let index = 0; index < data.segments.length; index += 1) {
         const segment = data.segments[index] || (data.segments[index] = {});
+        normalizeSegmentRefAudios(segment);
         ensureIds(segment, `segment-${segment.id || index}`, idFactory, used);
     }
     return data;
