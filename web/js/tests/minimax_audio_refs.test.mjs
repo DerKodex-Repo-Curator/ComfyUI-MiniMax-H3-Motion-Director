@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { getSegmentRefAudios, normalizeSegmentRefAudios } from "../minimax_audio_refs.mjs";
+import {
+    getSegmentRefAudios,
+    normalizeSegmentRefAudios,
+    normalizeTimelineAudioRefs,
+} from "../minimax_audio_refs.mjs";
 
 const canonical = [{ index: 0, audioFile: "canonical.wav" }];
 const legacy = [{ index: 0, audioFile: "legacy.wav" }];
@@ -19,5 +23,13 @@ assert.equal(segment.inputs.preserved, true);
 const canonicalWins = { refAudios: canonical, ref_audios: legacy, inputs: { refAudios: nested } };
 normalizeSegmentRefAudios(canonicalWins);
 assert.deepEqual(canonicalWins.refAudios, canonical);
+
+const rawTimeline = JSON.stringify({
+    segments: [{ id: "shot-001", refAudios: [], inputs: { refAudios: nested } }],
+});
+const roundTrip = JSON.parse(normalizeTimelineAudioRefs(rawTimeline));
+assert.deepEqual(roundTrip.segments[0].refAudios, nested);
+assert.deepEqual(roundTrip.segments[0].inputs.refAudios, nested);
+assert.equal(normalizeTimelineAudioRefs("not-json"), "not-json");
 
 console.log("minimax_audio_refs: PASS");

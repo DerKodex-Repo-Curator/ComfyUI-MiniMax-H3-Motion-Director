@@ -25,3 +25,23 @@ export function normalizeSegmentRefAudios(segment) {
     segment.refAudios = getSegmentRefAudios(segment);
     return segment;
 }
+
+/**
+ * Canonicalize timeline_data at the ComfyUI widget boundary.
+ *
+ * ComfyUI restores widget values before the Motion Director editor exists and
+ * exports those raw values again. Normalize here as well as in the editor so a
+ * load/save round-trip cannot discard nested audio references.
+ */
+export function normalizeTimelineAudioRefs(raw) {
+    if (typeof raw !== "string" || !raw.trim()) return raw;
+    let timeline;
+    try {
+        timeline = JSON.parse(raw);
+    } catch {
+        return raw;
+    }
+    if (!timeline || typeof timeline !== "object" || Array.isArray(timeline)) return raw;
+    for (const segment of timeline.segments || []) normalizeSegmentRefAudios(segment);
+    return JSON.stringify(timeline);
+}

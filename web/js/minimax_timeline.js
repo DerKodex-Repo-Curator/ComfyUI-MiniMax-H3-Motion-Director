@@ -150,7 +150,11 @@ import {
     ensureReferenceAssetSchema,
     resolveReferenceAssetId,
 } from "./minimax_reference_assets.mjs?boot=reference_assets_v2";
-import { getSegmentRefAudios, normalizeSegmentRefAudios } from "./minimax_audio_refs.mjs";
+import {
+    getSegmentRefAudios,
+    normalizeSegmentRefAudios,
+    normalizeTimelineAudioRefs,
+} from "./minimax_audio_refs.mjs";
 import {
     restoreBatchTaskWorkspace,
     stashBatchTaskWorkspace,
@@ -1109,9 +1113,10 @@ function captureDirectorWidgetState(node) {
         if (widget.serialize === false) continue;
         if (DIRECTOR_TRANSIENT_WIDGETS.has(widget.name)) continue;
 
-        state[widget.name] = cloneDirectorWidgetValue(
-            widget.value,
-        );
+        const value = widget.name === "timeline_data"
+            ? normalizeTimelineAudioRefs(widget.value)
+            : widget.value;
+        state[widget.name] = cloneDirectorWidgetValue(value);
     }
 
     return state;
@@ -1164,14 +1169,24 @@ function restoreDirectorWidgetState(node, serializedNode) {
             continue;
         }
 
-        widget.value = cloneDirectorWidgetValue(
-            source[widget.name],
-        );
+        const value = cloneDirectorWidgetValue(source[widget.name]);
+        widget.value = widget.name === "timeline_data"
+            ? normalizeTimelineAudioRefs(value)
+            : value;
 
         restored += 1;
     }
 
     return restored > 0;
+}
+
+function normalizeDirectorTimelineWidget(node) {
+    const widget = node?.widgets?.find((candidate) => candidate?.name === "timeline_data");
+    if (!widget) return false;
+    const normalized = normalizeTimelineAudioRefs(widget.value);
+    if (normalized === widget.value) return false;
+    widget.value = normalized;
+    return true;
 }
 
 
@@ -5392,6 +5407,7 @@ class MiniMaxH3MotionDirectorEditor {
             return;
         }
         if (!this.timelineWidget) return;
+        normalizeDirectorTimelineWidget(this.node);
         this.syncFromWidgets();
         this.timelineWidget.value = JSON.stringify(this.buildTimelinePayload());
         this.node.setDirtyCanvas(true, false);
@@ -16938,6 +16954,7 @@ app.registerExtension({
                     this,
                     arguments[0],
                 );
+                normalizeDirectorTimelineWidget(this);
             } finally {
                 this._mmxContinuityConfiguring = false;
 
