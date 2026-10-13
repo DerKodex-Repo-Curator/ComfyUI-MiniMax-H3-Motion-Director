@@ -958,9 +958,16 @@ def build_director_plan(
             seg_task = row_task or task_type
             # Segment mode: only this segment's refs — never inherit global.refs / refAudios.
             seg_refs = _load_refs(seg_data.get("refs") or [])
-            seg_ref_audios = _load_ref_audios(
-                seg_data.get("refAudios") or seg_data.get("ref_audios") or []
+            segment_inputs = seg_data.get("inputs") or {}
+            raw_segment_audios = (
+                seg_data.get("refAudios")
+                or seg_data.get("ref_audios")
+                or segment_inputs.get("refAudios")
+                or segment_inputs.get("ref_audios")
+                or segment_inputs.get("referenceAudios")
+                or []
             )
+            seg_ref_audios = _load_ref_audios(raw_segment_audios)
             seg_ref_video = dict(seg_data.get("referenceVideo") or seg_data.get("reference_video") or {})
 
         seg_task_key = resolve_task_key(seg_task)

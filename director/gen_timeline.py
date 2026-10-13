@@ -342,7 +342,6 @@ def _raw_asset_id(item: dict, kind: str, index: int) -> str:
         or f"{kind}-{index}"
     )
 
-
 def _known_assets(*asset_lists: tuple[str, list[dict]]) -> dict[tuple[str, str], str]:
     known: dict[tuple[str, str], str] = {}
     for kind, items in asset_lists:
@@ -545,9 +544,18 @@ def build_gen_director_plan(
                 _load_ref_audios(global_block.get("refAudios") or global_block.get("ref_audios") or []),
             )
         else:
+            segment_inputs = seg_data.get("inputs") or {}
+            raw_segment_audios = (
+                seg_data.get("refAudios")
+                or seg_data.get("ref_audios")
+                or segment_inputs.get("refAudios")
+                or segment_inputs.get("ref_audios")
+                or segment_inputs.get("referenceAudios")
+                or []
+            )
             seg_ref_audios = segment_ref_audios_for_context(
                 seg_task_key,
-                _load_ref_audios(seg_data.get("refAudios") or seg_data.get("ref_audios") or []),
+                _load_ref_audios(raw_segment_audios),
             )
             if seg_task_key in ("r2v", "r2flv"):
                 seg_len = max(5, int(end) - int(start))

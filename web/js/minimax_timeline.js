@@ -150,6 +150,7 @@ import {
     ensureReferenceAssetSchema,
     resolveReferenceAssetId,
 } from "./minimax_reference_assets.mjs?boot=reference_assets_v2";
+import { getSegmentRefAudios, normalizeSegmentRefAudios } from "./minimax_audio_refs.mjs";
 import {
     restoreBatchTaskWorkspace,
     stashBatchTaskWorkspace,
@@ -407,7 +408,7 @@ function sanitizeSegmentForPayload(seg) {
     return {
         ...rest,
         refs: Array.isArray(rest.refs) ? rest.refs.map(sanitizeRefImage) : [],
-        refAudios: Array.isArray(rest.refAudios) ? rest.refAudios.map(sanitizeRefAudio) : [],
+        refAudios: getSegmentRefAudios(rest).map(sanitizeRefAudio),
         refVideos: Array.isArray(rest.refVideos) ? rest.refVideos.map(sanitizeRefVideo) : [],
         genImage: rest.genImage
             ? { imageFile: rest.genImage.imageFile || "", fileName: rest.genImage.fileName || "" }
@@ -2465,6 +2466,7 @@ function parseTimeline(raw, totalFrames, fps) {
             const n = data.totalFrames || data.video.sourceFrameCount || legacyFrames || total;
             data.segments = [{ id: uid(), start: 0, length: Math.max(MIN_SEG, n), prompt: "", taskType: "", refs: [], refAudios: [], referenceVideo: {} }];
         }
+        for (const seg of data.segments) normalizeSegmentRefAudios(seg);
         for (const seg of data.segments) {
             if (!seg.id) seg.id = uid();
             if (seg.length == null && seg.end != null) seg.length = seg.end - seg.start;
